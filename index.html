@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>TXI Email Signature Generator</title>
+<meta name="description" content="Generate your TXI email signature and paste it into Gmail.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%E2%9C%8D%EF%B8%8F%3C%2Ftext%3E%3C%2Fsvg%3E">
+</head>
+<body>
+<style>
+  :root {
+    /* TXI brand tokens */
+    --primary: #432cf3;
+    --primary-active: #2e1fcc;
+    --on-primary: #ffffff;
+    --periwinkle: #6687ed;
+    --lilac: #b8aeed;
+
+    /* Neutrals, biased toward the brand indigo rather than pure grey */
+    --ink: #070b18;
+    --body: #33374a;
+    --muted: #5c6076;
+    --faint: #8a8ea6;
+    --canvas: #ffffff;
+    --surface: #f4f4f8;
+    --surface-2: #e9e9f4;
+    --line: #dcdce8;
+    --line-strong: #c6c6da;
+
+    --ok: #1f7a52;
+
+    --shadow: 0 1px 2px rgba(7, 11, 24, .05), 0 12px 32px -16px rgba(7, 11, 24, .18);
+
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    /* The preview must use the same stack the email will render in. Not a style choice. */
+    --email: Arial, Helvetica, sans-serif;
+    --mono: ui-monospace, Consolas, "Courier New", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #8c7cf8;
+      --primary-active: #a596fb;
+      --on-primary: #0b0f1c;
+      --periwinkle: #8fa6f2;
+      --lilac: #b8aeed;
+
+      --ink: #f2f2f8;
+      --body: #d2d3e2;
+      --muted: #9b9eb4;
+      --faint: #767a92;
+      --canvas: #0e1220;
+      --surface: #070b18;
+      --surface-2: #191e33;
+      --line: #262c45;
+      --line-strong: #39406090;
+
+      --ok: #57bb8a;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 40px -20px rgba(0, 0, 0, .7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --primary: #8c7cf8;
+    --primary-active: #a596fb;
+    --on-primary: #0b0f1c;
+    --periwinkle: #8fa6f2;
+    --lilac: #b8aeed;
+    --ink: #f2f2f8;
+    --body: #d2d3e2;
+    --muted: #9b9eb4;
+    --faint: #767a92;
+    --canvas: #0e1220;
+    --surface: #070b18;
+    --surface-2: #191e33;
+    --line: #262c45;
+    --line-strong: #39406090;
+    --ok: #57bb8a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 40px -20px rgba(0, 0, 0, .7);
+  }
+
+  :root[data-theme="light"] {
+    --primary: #432cf3;
+    --primary-active: #2e1fcc;
+    --on-primary: #ffffff;
+    --periwinkle: #6687ed;
+    --lilac: #b8aeed;
+    --ink: #070b18;
+    --body: #33374a;
+    --muted: #5c6076;
+    --faint: #8a8ea6;
+    --canvas: #ffffff;
+    --surface: #f4f4f8;
+    --surface-2: #e9e9f4;
+    --line: #dcdce8;
+    --line-strong: #c6c6da;
+    --ok: #1f7a52;
+    --shadow: 0 1px 2px rgba(7, 11, 24, .05), 0 12px 32px -16px rgba(7, 11, 24, .18);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 3rem 1.5rem 5rem;
+    background: var(--surface);
+    color: var(--body);
+    font: 400 15px/1.6 var(--ui);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 60rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead { display: flex; flex-direction: column; gap: .5rem; }
+
+  .eyebrow {
+    margin: 0;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--primary);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.65rem, 4vw, 2.1rem);
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    font-weight: 700;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 58ch;
+    color: var(--muted);
+  }
+
+  /* ---------- layout ---------- */
+
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 47rem) {
+    .split { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .panel {
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+  }
+
+  .panel-label {
+    margin: 0;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* ---------- form ---------- */
+
+  .fields { display: flex; flex-direction: column; gap: 1rem; }
+
+  .field { display: flex; flex-direction: column; gap: .375rem; }
+
+  .field > .name {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: .5rem;
+  }
+
+  .field .optional {
+    font-weight: 400;
+    font-size: .75rem;
+    color: var(--faint);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .field input {
+    width: 100%;
+    padding: .5625rem .6875rem;
+    font: 400 .9375rem/1.4 var(--ui);
+    color: var(--ink);
+    background: var(--canvas);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+
+  .field input::placeholder { color: var(--faint); }
+
+  .field input:hover { border-color: var(--periwinkle); }
+
+  .field input:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
+  .field .hint { font-size: .75rem; color: var(--muted); }
+
+  /* ---------- inbox preview ---------- */
+
+  /*
+    The signature always lands on the white ground of a mail client, so the
+    preview pane stays white in both themes. Showing it on a dark surface would
+    be a prettier page and a lying preview.
+  */
+  .mailpane {
+    background: #ffffff;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .mailpane-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .5rem .75rem;
+    background: #f5f5f7;
+    border-bottom: 1px solid #e4e4ec;
+    font-size: .6875rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #8a8ea6;
+  }
+
+  .mailpane-bar .dots { display: flex; gap: .3125rem; }
+  .mailpane-bar .dots i {
+    width: .4375rem; height: .4375rem; border-radius: 50%;
+    background: #d3d3e0; display: block;
+  }
+
+  .mailpane-body { padding: 1.25rem 1.125rem 1.375rem; overflow-x: auto; }
+
+  .mailpane-quote {
+    margin: 0 0 1.125rem;
+    padding: 0 0 1.125rem;
+    border-bottom: 1px solid #eeeef4;
+    font: 400 13px/1.55 Arial, Helvetica, sans-serif;
+    color: #6b6f85;
+  }
+
+  #preview { min-height: 6.5rem; }
+
+  /* ---------- actions ---------- */
+
+  .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+  button {
+    font: 600 .875rem/1 var(--ui);
+    padding: .6875rem 1rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  .btn-primary { background: var(--primary); color: var(--on-primary); }
+  .btn-primary:hover { background: var(--primary-active); }
+
+  .btn-quiet {
+    background: transparent;
+    color: var(--primary);
+    border-color: var(--line-strong);
+  }
+  .btn-quiet:hover { background: var(--surface-2); border-color: var(--primary); }
+
+  .status {
+    margin: 0;
+    min-height: 1.25rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--ok);
+  }
+  .status[data-tone="warn"] { color: var(--primary); }
+
+  /* ---------- steps + notes ---------- */
+
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+  @media (max-width: 47rem) {
+    .cols { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: .625rem; }
+
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 1.375rem minmax(0, 1fr);
+    gap: .625rem;
+    font-size: .875rem;
+    color: var(--body);
+  }
+
+  .steps li::before {
+    content: counter(step);
+    font: 700 .75rem/1.375rem var(--mono);
+    text-align: center;
+    color: var(--primary);
+    background: var(--surface-2);
+    border-radius: 6px;
+    height: 1.375rem;
+  }
+
+  .steps b, .notes b { color: var(--ink); font-weight: 600; }
+
+  kbd {
+    font: 600 .75rem/1 var(--mono);
+    padding: .1875rem .375rem;
+    border: 1px solid var(--line-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .notes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .625rem; font-size: .8125rem; color: var(--muted); }
+
+  .notes li {
+    padding-left: .875rem;
+    border-left: 2px solid var(--lilac);
+  }
+
+  .callout {
+    margin: 0;
+    padding: .75rem .875rem;
+    background: var(--surface-2);
+    border-radius: 8px;
+    font-size: .8125rem;
+    color: var(--body);
+  }
+
+  .raw { display: flex; flex-direction: column; gap: .625rem; }
+
+  .raw summary {
+    cursor: pointer;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--primary);
+    width: fit-content;
+  }
+  .raw summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+
+  .raw textarea {
+    width: 100%;
+    min-height: 11rem;
+    margin-top: .625rem;
+    padding: .875rem;
+    font: 400 12px/1.65 var(--mono);
+    color: var(--body);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    resize: vertical;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+  }
+  .raw textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+  footer {
+    font-size: .75rem;
+    color: var(--faint);
+    border-top: 1px solid var(--line);
+    padding-top: 1.25rem;
+  }
+  footer code { font: 400 .75rem var(--mono); color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">TXI &nbsp;|&nbsp; Traffic By Intent</p>
+    <h1>Email signature generator</h1>
+    <p class="lede">Type your details, copy, paste into Gmail. One house style for everyone, so nobody hand-builds their own and nobody drifts off brand.</p>
+  </header>
+
+  <div class="split">
+
+    <section class="panel" aria-labelledby="lbl-details">
+      <p class="panel-label" id="lbl-details">Your details</p>
+      <div class="fields">
+        <div class="field">
+          <label class="name" for="f-name">Full name</label>
+          <input id="f-name" type="text" value="" placeholder="First Last" autocomplete="name" spellcheck="false">
+        </div>
+        <div class="field">
+          <label class="name" for="f-title">Title</label>
+          <input id="f-title" type="text" value="" placeholder="Co-founder" autocomplete="organization-title" spellcheck="false">
+        </div>
+        <div class="field">
+          <label class="name" for="f-email">Email</label>
+          <input id="f-email" type="email" value="" placeholder="you@trafficbyintent.com" autocomplete="email" spellcheck="false">
+          <span class="hint" id="email-hint"></span>
+        </div>
+        <div class="field">
+          <label class="name" for="f-phone">Phone <span class="optional">optional</span></label>
+          <input id="f-phone" type="text" value="" placeholder="+1 405 555 0134" autocomplete="tel" spellcheck="false">
+          <span class="hint">Leave blank and the line disappears entirely.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="lbl-preview">
+      <p class="panel-label" id="lbl-preview">How it lands in the inbox</p>
+
+      <div class="mailpane">
+        <div class="mailpane-bar">
+          <span>New message</span>
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
+        <div class="mailpane-body">
+          <p class="mailpane-quote">Thanks for the time today. Sending over the numbers now.</p>
+          <div id="preview"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-primary" id="btn-copy">Copy signature</button>
+        <button type="button" class="btn-quiet" id="btn-select">Select it instead</button>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+
+  </div>
+
+  <div class="cols">
+
+    <section class="panel" aria-labelledby="lbl-steps">
+      <p class="panel-label" id="lbl-steps">Putting it in Gmail</p>
+      <ol class="steps">
+        <li><span>Click <b>Copy signature</b>.</span></li>
+        <li><span>In Gmail, open the gear icon, then <b>See all settings</b>. Stay on the <b>General</b> tab.</span></li>
+        <li><span>Scroll to <b>Signature</b>. Click <b>Create new</b> if you have none, and name it <b>TXI</b>.</span></li>
+        <li><span>Click into the signature box and press <kbd>Ctrl</kbd> <kbd>V</kbd>. On a Mac, <kbd>Cmd</kbd> <kbd>V</kbd>.</span></li>
+        <li><span>Under <b>Signature defaults</b>, set <b>New emails</b> and <b>Reply/forward</b> both to <b>TXI</b>.</span></li>
+        <li><span>Scroll to the bottom and click <b>Save Changes</b>. Gmail does not autosave this.</span></li>
+        <li><span>Send yourself a test. The brand line should be indigo and the site link should open.</span></li>
+      </ol>
+      <p class="callout">Use <kbd>Ctrl</kbd> <kbd>V</kbd>, not <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>V</kbd>. Shift pastes plain text and strips every bit of the formatting.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="lbl-rules">
+      <p class="panel-label" id="lbl-rules">Why it looks plain on purpose</p>
+      <ul class="notes">
+        <li><b>Built out of a table.</b> Outlook ignores modern CSS layout. Tables render the same everywhere.</li>
+        <li><b>Every style inline.</b> Gmail strips stylesheets on receive, so a stylesheet becomes no styling at all.</li>
+        <li><b>Arial only.</b> No custom font survives an email client. Arial looks identical on Windows, Mac, and phones.</li>
+        <li><b>No logo image.</b> Image files get blocked in Outlook, show as broken icons, or attach themselves to every email you send. The wordmark is live text.</li>
+        <li><b>Six lines, nothing else.</b> No banners, no quote of the day, no social icons, no confidentiality paragraph.</li>
+      </ul>
+      <details class="raw">
+        <summary>Show the raw HTML</summary>
+        <textarea id="raw" readonly spellcheck="false" aria-label="Raw signature HTML"></textarea>
+      </details>
+    </section>
+
+  </div>
+
+  <footer>
+    Brand colors: <code>#432cf3</code> primary, <code>#070b18</code> ink, <code>#595959</code> muted. Same template the Node builder uses in
+    <code>TXI-Data/outputs/email_signatures/</code>, so the page and the repo cannot drift apart.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Locked to the email-safe brand values. These are not themed: the signature
+  // renders in the recipient's mail client, not on this page.
+  var PRIMARY = "#432cf3";
+  var INK = "#070b18";
+  var MUTED = "#595959";
+
+  var DEFAULTS = { name: "Your Name", title: "Your Title", email: "you@trafficbyintent.com" };
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function build(data) {
+    var name = esc(data.name.trim()) || DEFAULTS.name;
+    var title = esc(data.title.trim()) || DEFAULTS.title;
+    var email = esc(data.email.trim()) || DEFAULTS.email;
+    var phone = esc(data.phone.trim());
+
+    var phoneRow = phone
+      ? '  <tr>\n    <td style="padding:0;font-family:Consolas,\'Courier New\',monospace;font-size:13px;line-height:19px;color:' + MUTED + ';letter-spacing:0.3px;">' + phone + '</td>\n  </tr>\n'
+      : "";
+
+    return '<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;">\n' +
+      '  <tr>\n    <td style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:21px;font-weight:bold;color:' + INK + ';">' + name + '</td>\n  </tr>\n' +
+      '  <tr>\n    <td style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:' + MUTED + ';">' + title + '</td>\n  </tr>\n' +
+      '  <tr>\n    <td style="padding:3px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:24px;color:' + PRIMARY + ';">TXI&nbsp;|&nbsp;Traffic By Intent</td>\n  </tr>\n' +
+      '  <tr>\n    <td style="padding:3px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:' + MUTED + ';"><a href="mailto:' + email + '" style="color:' + MUTED + ';text-decoration:none;">' + email + '</a></td>\n  </tr>\n' +
+      phoneRow +
+      '  <tr>\n    <td style="padding:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;"><a href="https://trafficbyintent.com" style="color:' + PRIMARY + ';text-decoration:none;font-weight:bold;">trafficbyintent.com</a></td>\n  </tr>\n' +
+      '</table>';
+  }
+
+  var fields = {
+    name: document.getElementById("f-name"),
+    title: document.getElementById("f-title"),
+    email: document.getElementById("f-email"),
+    phone: document.getElementById("f-phone")
+  };
+  var preview = document.getElementById("preview");
+  var raw = document.getElementById("raw");
+  var status = document.getElementById("status");
+  var emailHint = document.getElementById("email-hint");
+  var current = "";
+
+  function say(message, tone) {
+    status.textContent = message;
+    status.setAttribute("data-tone", tone || "ok");
+    window.clearTimeout(say.timer);
+    say.timer = window.setTimeout(function () {
+      if (status.textContent === message) status.textContent = "";
+    }, 6000);
+  }
+
+  function checkEmail() {
+    var value = fields.email.value.trim();
+    if (!value) { emailHint.textContent = ""; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      emailHint.textContent = "That is missing an @ or a domain.";
+    } else if (!/@trafficbyintent\.com$/i.test(value)) {
+      emailHint.textContent = "Heads up: that is not a @trafficbyintent.com address.";
+    } else {
+      emailHint.textContent = "";
+    }
+  }
+
+  function refresh() {
+    current = build({
+      name: fields.name.value,
+      title: fields.title.value,
+      email: fields.email.value,
+      phone: fields.phone.value
+    });
+    preview.innerHTML = current;
+    raw.value = current;
+    checkEmail();
+  }
+
+  function selectPreview() {
+    var range = document.createRange();
+    range.selectNodeContents(preview);
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return selection;
+  }
+
+  function copyViaSelection() {
+    var selection = selectPreview();
+    var copied = false;
+    try { copied = document.execCommand("copy"); } catch (err) { copied = false; }
+    if (copied) {
+      selection.removeAllRanges();
+      say("Copied. Paste into Gmail with Ctrl+V.");
+    } else {
+      say("Your browser blocked the copy. The signature is selected now, so press Ctrl+C.", "warn");
+    }
+  }
+
+  function copy() {
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      var item = new window.ClipboardItem({
+        "text/html": new Blob([current], { type: "text/html" }),
+        "text/plain": new Blob([preview.innerText], { type: "text/plain" })
+      });
+      navigator.clipboard.write([item]).then(function () {
+        say("Copied. Paste into Gmail with Ctrl+V.");
+      }, copyViaSelection);
+      return;
+    }
+    copyViaSelection();
+  }
+
+  Object.keys(fields).forEach(function (key) {
+    fields[key].addEventListener("input", refresh);
+  });
+
+  document.getElementById("btn-copy").addEventListener("click", copy);
+
+  document.getElementById("btn-select").addEventListener("click", function () {
+    selectPreview();
+    say("Selected. Press Ctrl+C to copy it yourself.", "warn");
+  });
+
+  raw.addEventListener("focus", function () { raw.select(); });
+
+  refresh();
+  fields.name.focus();
+})();
+</script>
+</body>
+</html>
