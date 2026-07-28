@@ -554,14 +554,22 @@
     var main = extMatch ? raw.slice(0, extMatch.index) : raw;
 
     var digits = main.replace(/\D/g, "");
+    var national;
 
-    // An explicit + on a country code other than 1 means international. Leave it.
-    if (/^\s*\+/.test(main) && digits.charAt(0) !== "1") return raw;
+    if (/^\s*\+/.test(main)) {
+      // An explicit + names the country code, so that digit is never part of the
+      // number. Reading it as one turns a backspace on "+1 (415) 535-5201" into
+      // "+1 (141) 553-5520". Anything but country code 1 is international, and
+      // there is no safe universal grouping, so leave it exactly as typed.
+      if (digits.charAt(0) !== "1") return raw;
+      national = digits.slice(1);
+    } else {
+      national = digits.length === 11 && digits.charAt(0) === "1" ? digits.slice(1) : digits;
+    }
 
-    if (digits.length === 11 && digits.charAt(0) === "1") digits = digits.slice(1);
-    if (digits.length !== 10) return raw;
+    if (national.length !== 10) return raw;
 
-    var out = "+1 (" + digits.slice(0, 3) + ") " + digits.slice(3, 6) + "-" + digits.slice(6);
+    var out = "+1 (" + national.slice(0, 3) + ") " + national.slice(3, 6) + "-" + national.slice(6);
     return ext ? out + " x" + ext : out;
   }
 
