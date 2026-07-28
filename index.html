@@ -649,7 +649,10 @@
   raw.addEventListener("focus", function () { raw.select(); });
 
   refresh();
-  fields.name.focus();
+
+  // Focus the first field on desktop only. On a phone this would throw up the
+  // keyboard before the person has seen what the page is.
+  if (window.matchMedia("(min-width: 47rem)").matches) fields.name.focus();
 })();
 </script>
 </body>
