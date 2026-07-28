@@ -349,6 +349,14 @@
 
   .steps b, .notes b { color: var(--ink); font-weight: 600; }
 
+  .steps code {
+    font: 600 .8125rem/1 var(--mono);
+    padding: .125rem .3125rem;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
   kbd {
     font: 600 .75rem/1 var(--mono);
     padding: .1875rem .375rem;
@@ -481,9 +489,11 @@
       <ol class="steps">
         <li><span>Click <b>Copy signature</b>.</span></li>
         <li><span>In Gmail, open the gear icon, then <b>See all settings</b>. Stay on the <b>General</b> tab.</span></li>
-        <li><span>Scroll to <b>Signature</b>. Click <b>Create new</b> if you have none, and name it <b>TXI</b>.</span></li>
+        <li><span>Scroll to <b>Signature</b>. Click <b>Create new</b> if you have none. The name is only for you, recipients never see it.</span></li>
         <li><span>Click into the signature box and press <kbd>Ctrl</kbd> <kbd>V</kbd>. On a Mac, <kbd>Cmd</kbd> <kbd>V</kbd>.</span></li>
-        <li><span>Under <b>Signature defaults</b>, set <b>New emails</b> and <b>Reply/forward</b> both to <b>TXI</b>.</span></li>
+        <li><span>Under <b>Signature defaults</b>, set <b>For new emails use</b> to that signature.</span></li>
+        <li><span><b>On reply/forward use</b> is your call. Signing every reply stacks your block down a long thread. Leaving it off means a forwarded thread carries no way to reach you. Either is fine.</span></li>
+        <li><span>If you do sign replies, pick the <b>same signature</b> and tick <b>Insert signature before quoted text in replies</b>. It sits under your reply instead of below the whole thread, and the stray <code>--</code> line Gmail adds disappears. That way every signed reply on the team looks the same.</span></li>
         <li><span>Scroll to the bottom and click <b>Save Changes</b>. Gmail does not autosave this.</span></li>
         <li><span>Send yourself a test. The brand line should be indigo and the site link should open.</span></li>
       </ol>
