@@ -445,8 +445,8 @@
         </div>
         <div class="field">
           <label class="name" for="f-phone">Phone <span class="optional">optional</span></label>
-          <input id="f-phone" type="text" value="" placeholder="+1 405 555 0134" autocomplete="tel" spellcheck="false">
-          <span class="hint">Leave blank and the line disappears entirely.</span>
+          <input id="f-phone" type="text" value="" placeholder="4055550134" autocomplete="tel" spellcheck="false" inputmode="tel">
+          <span class="hint">Type the digits, it formats itself. Leave blank and the line disappears entirely.</span>
         </div>
       </div>
     </section>
@@ -533,6 +533,36 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  /*
+    Turns 4155355201 into +1 (415) 535-5201.
+
+    Only commits a format once a full 10-digit US number is present. Formatting
+    partial input as it is typed means a deleted ")" appears to do nothing, which
+    feels broken. Non-US numbers pass through untouched: no way to guess the
+    grouping convention for every country, and a wrong guess is worse than none.
+    Keep this identical to normalizePhone() in build_signatures.mjs.
+  */
+  function normalizePhone(value) {
+    var raw = String(value == null ? "" : value).trim();
+    if (!raw) return "";
+
+    // Hold any extension aside so it survives the reformat.
+    var extMatch = raw.match(/\s*(?:x|ext\.?)\s*(\d+)$/i);
+    var ext = extMatch ? extMatch[1] : "";
+    var main = extMatch ? raw.slice(0, extMatch.index) : raw;
+
+    var digits = main.replace(/\D/g, "");
+
+    // An explicit + on a country code other than 1 means international. Leave it.
+    if (/^\s*\+/.test(main) && digits.charAt(0) !== "1") return raw;
+
+    if (digits.length === 11 && digits.charAt(0) === "1") digits = digits.slice(1);
+    if (digits.length !== 10) return raw;
+
+    var out = "+1 (" + digits.slice(0, 3) + ") " + digits.slice(3, 6) + "-" + digits.slice(6);
+    return ext ? out + " x" + ext : out;
   }
 
   function build(data) {
@@ -637,6 +667,32 @@
 
   Object.keys(fields).forEach(function (key) {
     fields[key].addEventListener("input", refresh);
+  });
+
+  /*
+    Reformat while typing only when the caret sits at the end, which is the
+    normal case. Mid-string edits are left alone until blur, so rewriting the
+    value never yanks the caret out from under someone.
+  */
+  fields.phone.addEventListener("input", function () {
+    var input = fields.phone;
+    var atEnd = input.selectionStart === input.value.length && input.selectionStart === input.selectionEnd;
+    if (!atEnd) return;
+    var formatted = normalizePhone(input.value);
+    if (formatted !== input.value) {
+      input.value = formatted;
+      input.setSelectionRange(formatted.length, formatted.length);
+      refresh();
+    }
+  });
+
+  fields.phone.addEventListener("blur", function () {
+    var input = fields.phone;
+    var formatted = normalizePhone(input.value);
+    if (formatted !== input.value) {
+      input.value = formatted;
+      refresh();
+    }
   });
 
   document.getElementById("btn-copy").addEventListener("click", copy);
