@@ -229,6 +229,7 @@
   }
 
   .field .hint { font-size: .75rem; color: var(--muted); }
+  .field .hint[data-tone="warn"] { color: var(--primary); font-weight: 600; }
 
   /* ---------- inbox preview ---------- */
 
@@ -484,6 +485,11 @@
           <input id="f-phone" type="text" value="" placeholder="4055550134" autocomplete="tel" spellcheck="false" inputmode="tel">
           <span class="hint">Type the digits, it formats itself. Leave blank and the line disappears entirely.</span>
         </div>
+        <div class="field">
+          <label class="name" for="f-booking">Booking link <span class="optional">optional</span></label>
+          <input id="f-booking" type="url" value="" placeholder="calendly.com/your-name" autocomplete="url" spellcheck="false" inputmode="url">
+          <span class="hint" id="booking-hint">Your Calendly, HubSpot, or Google booking page. Shows as "Book time with me". Leave blank and the line disappears.</span>
+        </div>
       </div>
     </section>
 
@@ -562,7 +568,7 @@
         <li><b>Every style inline.</b> Gmail strips stylesheets on receive, so a stylesheet becomes no styling at all.</li>
         <li><b>Arial only.</b> No custom font survives an email client. Arial looks identical on Windows, Mac, and phones.</li>
         <li><b>No logo image.</b> Image files get blocked in Outlook, show as broken icons, or attach themselves to every email you send. The wordmark is live text.</li>
-        <li><b>Six lines, nothing else.</b> No banners, no quote of the day, no social icons, no confidentiality paragraph.</li>
+        <li><b>Six lines, seven with a booking link. Nothing else.</b> No banners, no quote of the day, no social icons, no confidentiality paragraph.</li>
       </ul>
       <details class="raw">
         <summary>Show the raw HTML</summary>
@@ -642,14 +648,47 @@
     return ext ? out + " x" + ext : out;
   }
 
+  /*
+    Cleans up a booking link. Returns "" for blank, null for anything that is not
+    a usable web link, otherwise the link with https:// added when it was pasted
+    without one. Only http(s) gets through: this href rides along on every email
+    the person sends, so a javascript: or data: link must never reach it.
+    Keep identical to normalizeBookingUrl() in build_signatures.mjs.
+  */
+  function normalizeBookingUrl(value) {
+    var raw = String(value == null ? "" : value).trim();
+    if (!raw) return "";
+    if (/\s/.test(raw)) return null;
+    // Any other explicit scheme (javascript:, mailto:, data:) is rejected outright.
+    if (/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(raw) && !/^https?:\/\//i.test(raw)) return null;
+    var withScheme = /^https?:\/\//i.test(raw) ? raw : "https://" + raw;
+    var parsed;
+    try {
+      parsed = new URL(withScheme);
+    } catch (err) {
+      return null;
+    }
+    if (!/^https?:$/.test(parsed.protocol)) return null;
+    // A host with no dot ("calendly", "localhost") is a typo, not a booking page.
+    if (parsed.hostname.indexOf(".") === -1) return null;
+    return withScheme;
+  }
+
+  var BOOKING_LABEL = "Book time with me";
+
   function build(data) {
     var name = esc(data.name.trim()) || DEFAULTS.name;
     var title = esc(data.title.trim()) || DEFAULTS.title;
     var email = esc(data.email.trim()) || DEFAULTS.email;
     var phone = esc(data.phone.trim());
+    var booking = esc(normalizeBookingUrl(data.booking) || "");
 
     var phoneRow = phone
       ? '  <tr>\n    <td style="padding:0;font-family:Consolas,\'Courier New\',monospace;font-size:13px;line-height:19px;color:' + MUTED + ';letter-spacing:0.3px;">' + phone + '</td>\n  </tr>\n'
+      : "";
+
+    var bookingRow = booking
+      ? '  <tr>\n    <td style="padding:0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;"><a href="' + booking + '" style="color:' + PRIMARY + ';text-decoration:none;">' + BOOKING_LABEL + '</a></td>\n  </tr>\n'
       : "";
 
     return '<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">\n' +
@@ -658,6 +697,7 @@
       '  <tr>\n    <td style="padding:3px 0 0 0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:17px;line-height:24px;color:' + PRIMARY + ';">TXI&nbsp;|&nbsp;Traffic By Intent</td>\n  </tr>\n' +
       '  <tr>\n    <td style="padding:3px 0 0 0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;color:' + MUTED + ';"><a href="mailto:' + email + '" style="color:' + MUTED + ';text-decoration:none;">' + email + '</a></td>\n  </tr>\n' +
       phoneRow +
+      bookingRow +
       '  <tr>\n    <td style="padding:4px 0 0 0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;"><a href="https://trafficbyintent.com" style="color:' + PRIMARY + ';text-decoration:none;font-weight:bold;">trafficbyintent.com</a></td>\n  </tr>\n' +
       '</table>';
   }
@@ -685,10 +725,13 @@
     name: document.getElementById("f-name"),
     title: document.getElementById("f-title"),
     email: document.getElementById("f-email"),
-    phone: document.getElementById("f-phone")
+    phone: document.getElementById("f-phone"),
+    booking: document.getElementById("f-booking")
   };
   var status = document.getElementById("status");
   var emailHint = document.getElementById("email-hint");
+  var bookingHint = document.getElementById("booking-hint");
+  var BOOKING_HINT_DEFAULT = bookingHint.textContent;
 
   // Both blocks are generated from the same fields. Keyed by the preview element's
   // id, which is what the copy and select buttons carry in their data attributes.
@@ -728,12 +771,23 @@
     }
   }
 
+  function checkBooking() {
+    if (normalizeBookingUrl(fields.booking.value) === null) {
+      bookingHint.textContent = "That is not a web link, so it is left off. Paste the full address from your booking page.";
+      bookingHint.setAttribute("data-tone", "warn");
+    } else {
+      bookingHint.textContent = BOOKING_HINT_DEFAULT;
+      bookingHint.removeAttribute("data-tone");
+    }
+  }
+
   function refresh() {
     var data = {
       name: fields.name.value,
       title: fields.title.value,
       email: fields.email.value,
-      phone: fields.phone.value
+      phone: fields.phone.value,
+      booking: fields.booking.value
     };
     Object.keys(variants).forEach(function (key) {
       var v = variants[key];
@@ -742,6 +796,7 @@
       v.raw.value = v.html;
     });
     checkEmail();
+    checkBooking();
   }
 
   function selectVariant(key) {
