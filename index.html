@@ -490,6 +490,11 @@
           <input id="f-booking" type="url" value="" placeholder="calendly.com/your-name" autocomplete="url" spellcheck="false" inputmode="url">
           <span class="hint" id="booking-hint">Your Calendly, HubSpot, or Google booking page. Shows as "Book time with me". Leave blank and the line disappears.</span>
         </div>
+        <div class="field">
+          <label class="name" for="f-linkedin">LinkedIn <span class="optional">optional</span></label>
+          <input id="f-linkedin" type="url" value="" placeholder="linkedin.com/in/your-name" autocomplete="url" spellcheck="false" inputmode="url">
+          <span class="hint" id="linkedin-hint">Your profile link, or just the part after /in/. Shows as "LinkedIn". Leave blank and the line disappears.</span>
+        </div>
       </div>
     </section>
 
@@ -568,7 +573,7 @@
         <li><b>Every style inline.</b> Gmail strips stylesheets on receive, so a stylesheet becomes no styling at all.</li>
         <li><b>Arial only.</b> No custom font survives an email client. Arial looks identical on Windows, Mac, and phones.</li>
         <li><b>No logo image.</b> Image files get blocked in Outlook, show as broken icons, or attach themselves to every email you send. The wordmark is live text.</li>
-        <li><b>Six lines, seven with a booking link. Nothing else.</b> No banners, no quote of the day, no social icons, no confidentiality paragraph.</li>
+        <li><b>Six lines, plus one each for a booking link and LinkedIn. Nothing else.</b> No banners, no quote of the day, no social icons (LinkedIn is a text link, not an icon), no confidentiality paragraph.</li>
       </ul>
       <details class="raw">
         <summary>Show the raw HTML</summary>
@@ -674,7 +679,27 @@
     return withScheme;
   }
 
+  /*
+    Cleans up a LinkedIn profile link. Same contract as normalizeBookingUrl. A bare
+    handle ("mike-cook-4a1b2c") becomes the full /in/ link; anything with a dot must
+    be on linkedin.com. The query string is dropped, since the app's share button
+    appends ?utm_source=share&... and it would ride along on every email.
+    Keep identical to normalizeLinkedInUrl() in build_signatures.mjs.
+  */
+  function normalizeLinkedInUrl(value) {
+    var raw = String(value == null ? "" : value).trim();
+    if (!raw) return "";
+    // LinkedIn custom URLs are 3-100 letters, digits, or hyphens.
+    if (/^[A-Za-z0-9][A-Za-z0-9-]{2,99}$/.test(raw)) return "https://www.linkedin.com/in/" + raw;
+    var url = normalizeBookingUrl(raw);
+    if (!url) return null;
+    var host = new URL(url).hostname.toLowerCase();
+    if (host !== "linkedin.com" && !/\.linkedin\.com$/.test(host)) return null;
+    return url.split(/[?#]/)[0];
+  }
+
   var BOOKING_LABEL = "Book time with me";
+  var LINKEDIN_LABEL = "LinkedIn";
 
   function build(data) {
     var name = esc(data.name.trim()) || DEFAULTS.name;
@@ -682,6 +707,7 @@
     var email = esc(data.email.trim()) || DEFAULTS.email;
     var phone = esc(data.phone.trim());
     var booking = esc(normalizeBookingUrl(data.booking) || "");
+    var linkedin = esc(normalizeLinkedInUrl(data.linkedin) || "");
 
     var phoneRow = phone
       ? '  <tr>\n    <td style="padding:0;font-family:Consolas,\'Courier New\',monospace;font-size:13px;line-height:19px;color:' + MUTED + ';letter-spacing:0.3px;">' + phone + '</td>\n  </tr>\n'
@@ -691,6 +717,10 @@
       ? '  <tr>\n    <td style="padding:0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;"><a href="' + booking + '" style="color:' + PRIMARY + ';text-decoration:none;">' + BOOKING_LABEL + '</a></td>\n  </tr>\n'
       : "";
 
+    var linkedinRow = linkedin
+      ? '  <tr>\n    <td style="padding:0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;"><a href="' + linkedin + '" style="color:' + PRIMARY + ';text-decoration:none;">' + LINKEDIN_LABEL + '</a></td>\n  </tr>\n'
+      : "";
+
     return '<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;">\n' +
       '  <tr>\n    <td style="padding:0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:15px;line-height:21px;font-weight:bold;color:' + INK + ';">' + name + '</td>\n  </tr>\n' +
       '  <tr>\n    <td style="padding:0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:14px;line-height:20px;color:' + MUTED + ';">' + title + '</td>\n  </tr>\n' +
@@ -698,6 +728,7 @@
       '  <tr>\n    <td style="padding:3px 0 0 0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;color:' + MUTED + ';"><a href="mailto:' + email + '" style="color:' + MUTED + ';text-decoration:none;">' + email + '</a></td>\n  </tr>\n' +
       phoneRow +
       bookingRow +
+      linkedinRow +
       '  <tr>\n    <td style="padding:4px 0 0 0;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;"><a href="https://trafficbyintent.com" style="color:' + PRIMARY + ';text-decoration:none;font-weight:bold;">trafficbyintent.com</a></td>\n  </tr>\n' +
       '</table>';
   }
@@ -726,12 +757,15 @@
     title: document.getElementById("f-title"),
     email: document.getElementById("f-email"),
     phone: document.getElementById("f-phone"),
-    booking: document.getElementById("f-booking")
+    booking: document.getElementById("f-booking"),
+    linkedin: document.getElementById("f-linkedin")
   };
   var status = document.getElementById("status");
   var emailHint = document.getElementById("email-hint");
   var bookingHint = document.getElementById("booking-hint");
   var BOOKING_HINT_DEFAULT = bookingHint.textContent;
+  var linkedinHint = document.getElementById("linkedin-hint");
+  var LINKEDIN_HINT_DEFAULT = linkedinHint.textContent;
 
   // Both blocks are generated from the same fields. Keyed by the preview element's
   // id, which is what the copy and select buttons carry in their data attributes.
@@ -781,13 +815,24 @@
     }
   }
 
+  function checkLinkedIn() {
+    if (normalizeLinkedInUrl(fields.linkedin.value) === null) {
+      linkedinHint.textContent = "That is not a linkedin.com profile link, so it is left off. Copy the address from your profile page.";
+      linkedinHint.setAttribute("data-tone", "warn");
+    } else {
+      linkedinHint.textContent = LINKEDIN_HINT_DEFAULT;
+      linkedinHint.removeAttribute("data-tone");
+    }
+  }
+
   function refresh() {
     var data = {
       name: fields.name.value,
       title: fields.title.value,
       email: fields.email.value,
       phone: fields.phone.value,
-      booking: fields.booking.value
+      booking: fields.booking.value,
+      linkedin: fields.linkedin.value
     };
     Object.keys(variants).forEach(function (key) {
       var v = variants[key];
@@ -797,6 +842,7 @@
     });
     checkEmail();
     checkBooking();
+    checkLinkedIn();
   }
 
   function selectVariant(key) {
